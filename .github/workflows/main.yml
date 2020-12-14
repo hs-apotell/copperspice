@@ -1,0 +1,115 @@
+name: 'main'
+
+on: [ push ]
+
+jobs:
+  linux-clang:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt install -y cmake
+        sudo apt install -y ninja-build
+        sudo apt install -y libaudio-dev
+        sudo apt install -y libc6-dev
+        sudo apt install -y libfontconfig1-dev
+        sudo apt install -y libfreetype6-dev
+        sudo apt install -y libgl1-mesa-dev
+        sudo apt install -y libglib2.0-dev
+        sudo apt install -y libgstreamer-plugins-base1.0-dev
+        sudo apt install -y libgstreamer1.0-dev
+        sudo apt install -y libice-dev
+        sudo apt install -y libsm-dev
+        sudo apt install -y libx11-dev
+        sudo apt install -y libx11-xcb-dev
+        sudo apt install -y libxcb-glx0-dev
+        sudo apt install -y libxcb-icccm4-dev
+        sudo apt install -y libxcb-image0-dev
+        sudo apt install -y libxcb-keysyms1-dev
+        sudo apt install -y libxcb-randr0-dev
+        sudo apt install -y libxcb-render-util0-dev
+        sudo apt install -y libxcb-render0-dev
+        sudo apt install -y libxcb-shape0-dev
+        sudo apt install -y libxcb-shm0-dev
+        sudo apt install -y libxcb-sync-dev
+        sudo apt install -y libxcb-xfixes0-dev
+        sudo apt install -y libxcb-xinerama0-dev
+        sudo apt install -y libxcb-xkb-dev
+        sudo apt install -y libxcb1-dev
+        sudo apt install -y libxcursor-dev
+        sudo apt install -y libxext-dev
+        sudo apt install -y libxfixes-dev
+        sudo apt install -y libxi-dev
+        sudo apt install -y libxinerama-dev
+        sudo apt install -y libxkbcommon-dev
+        sudo apt install -y libxkbcommon-x11-dev
+        sudo apt install -y libxrandr-dev
+        sudo apt install -y libxrender-dev
+
+    - name: Git pull
+      uses: actions/checkout@v2
+
+    - name: Configure shell
+      run: |
+        echo 'CC=gcc-9' >> $GITHUB_ENV
+        echo 'CXX=g++-9' >> $GITHUB_ENV
+
+    - name: Show shell configuration
+      run: |
+        env
+        which cmake && cmake --version
+        which ninja && ninja --version
+        which $CC && $CC --version
+        which $CXX && $CXX --version
+
+    - name: Build
+      run: |
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install/gcc/Debug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/gcc/Debug
+        cmake --build out/build/gcc/Debug -j `nproc`
+
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/gcc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/gcc/Release
+        cmake --build out/build/gcc/Release -j `nproc`
+
+
+  windows-msvc:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: cmd
+
+    steps:
+    - name: Configure Git
+      run: git config --global core.autocrlf input
+      shell: bash
+
+    - name: Git pull
+      uses: actions/checkout@v2
+
+    - name: Configure shell
+      run: |
+        echo 'CC=cl' >> $GITHUB_ENV
+        echo 'CXX=cl' >> $GITHUB_ENV
+
+    - name: Show shell configuration
+      run: |
+        set
+        where cmake && cmake --version
+        where ninja && ninja --version
+        where %CC% && %CC% --version
+        where %CXX% && %CXX% --version
+
+    - name: Build
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install/msvc/Debug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/msvc/Debug
+        cmake --build out/build/msvc/Debug -j %NUMBER_OF_PROCESSORS%
+
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/msvc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/msvc/Release
+        cmake --build out/build/msvc/Release -j %NUMBER_OF_PROCESSORS%
