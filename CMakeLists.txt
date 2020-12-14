@@ -16,7 +16,7 @@ set(BUILD_MAJOR "1")
 set(BUILD_MINOR "7")
 set(BUILD_MICRO "0")
 
-set(BUILD_ABI ${BUILD_MAJOR}.${BUILD_MINOR})
+set(BUILD_ABI "")
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
@@ -49,7 +49,7 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
 
 elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
    set(CMAKE_INSTALL_BINDIR bin)
-   set(CMAKE_INSTALL_LIBDIR lib)
+   set(CMAKE_INSTALL_LIBDIR bin)
    set(CMAKE_INSTALL_INCLUDEDIR include)
 
 endif()

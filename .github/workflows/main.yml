@@ -51,6 +51,20 @@ jobs:
         sudo apt install -y libxrandr-dev
         sudo apt install -y libxrender-dev
 
+    - name: Get top commit details
+      uses: actions/github-script@0.3.0
+      id: author-date
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const commit_details = await github.git.getCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: context.sha });
+          return commit_details.data.author.date
+
+    - name: Retrieve date
+      run: |
+        echo "COMMITTED_AT=$(date -d ${{ steps.author-date.outputs.result }} +'%Y.%m.%d_%H.%M.%S')" >> $GITHUB_ENV
+        echo ${{ env.COMMITTED_AT }}
+
     - name: Git pull
       uses: actions/checkout@v2
 
@@ -71,9 +85,24 @@ jobs:
       run: |
         cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install/gcc/Debug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/gcc/Debug
         cmake --build out/build/gcc/Debug -j `nproc`
+        cmake --install out/build/gcc/Debug
 
         cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/gcc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/gcc/Release
         cmake --build out/build/gcc/Release -j `nproc`
+        cmake --install out/build/gcc/Release
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-1
+
+    - name: Upload archive to bucket
+      run: |
+          cd out/install/msvc
+          tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz .
+          aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
 
 
   windows-msvc:
@@ -88,6 +117,21 @@ jobs:
       run: git config --global core.autocrlf input
       shell: bash
 
+    - name: Get top commit details
+      uses: actions/github-script@0.3.0
+      id: author-date
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const commit_details = await github.git.getCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: context.sha });
+          return commit_details.data.author.date
+
+    - name: Retrieve date
+      run: |
+        echo "COMMITTED_AT=$(date -d ${{ steps.author-date.outputs.result }} +'%Y.%m.%d_%H.%M.%S')" >> $GITHUB_ENV
+        echo ${{ env.COMMITTED_AT }}
+      shell: bash
+
     - name: Git pull
       uses: actions/checkout@v2
 
@@ -95,6 +139,7 @@ jobs:
       run: |
         echo 'CC=cl' >> $GITHUB_ENV
         echo 'CXX=cl' >> $GITHUB_ENV
+      shell: bash
 
     - name: Show shell configuration
       run: |
@@ -110,6 +155,21 @@ jobs:
 
         cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install/msvc/Debug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/msvc/Debug
         cmake --build out/build/msvc/Debug -j %NUMBER_OF_PROCESSORS%
+        cmake --install out/build/msvc/Debug
 
         cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/msvc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/msvc/Release
         cmake --build out/build/msvc/Release -j %NUMBER_OF_PROCESSORS%
+        cmake --install out/build/msvc/Release
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-1
+
+    - name: Upload archive to bucket
+      run: |
+          cd out/install/msvc
+          tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz .
+          aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
