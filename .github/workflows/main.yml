@@ -148,8 +148,8 @@ jobs:
         set
         where cmake && cmake --version
         where ninja && ninja --version
-        where %CC% && %CC% --version
-        where %CXX% && %CXX% --version
+        where %CC% && %CC%
+        where %CXX% && %CXX%
 
     - name: Build
       run: |
