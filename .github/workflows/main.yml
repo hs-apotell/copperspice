@@ -103,7 +103,6 @@ jobs:
 
 
   linux-gcc-release:
-    if: false
     runs-on: ubunt-18.04
     defaults:
       run:
@@ -273,7 +272,6 @@ jobs:
 
 
   windows-msvc-release:
-    if: false
     runs-on: windows-2019
 
     defaults:
@@ -325,6 +323,7 @@ jobs:
         git clone https://github.com/hs-apotell/copperspice.git C:/copperspice --depth 1
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 
+        cd /d C:/copperspice
         cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/msvc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -S . -B out/build/msvc/Release
         cmake --build out/build/msvc/Release -j %NUMBER_OF_PROCESSORS%
         cmake --install out/build/msvc/Release
@@ -338,6 +337,6 @@ jobs:
 
     - name: Upload archive to bucket
       run: |
-        cd out/install/msvc
+        cd /d C:/copperspice/out/install/msvc
         tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz Release
         aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
