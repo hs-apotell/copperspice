@@ -4,7 +4,6 @@ on: [ push ]
 
 jobs:
   linux-gcc-debug:
-    if: false
     runs-on: ubuntu-18.04
     defaults:
       run:
