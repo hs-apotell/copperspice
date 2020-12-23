@@ -3,8 +3,17 @@ name: 'main'
 on: [ push ]
 
 jobs:
-  linux-gcc-debug:
+  linux-gcc:
     runs-on: ubuntu-18.04
+
+    strategy:
+      matrix:
+        configuration: [ debug, release ]
+
+    env:
+      CC: gcc-9
+      CXX: g++-9
+
     defaults:
       run:
         shell: bash
@@ -68,12 +77,7 @@ jobs:
     - name: Git pull
       uses: actions/checkout@v2
 
-    - name: Configure shell
-      run: |
-        echo 'CC=gcc-9' >> $GITHUB_ENV
-        echo 'CXX=g++-9' >> $GITHUB_ENV
-
-    - name: Show shell configuration
+    - name: Configure and show shell configuration
       run: |
         env
         which cmake && cmake --version
@@ -81,73 +85,59 @@ jobs:
         which $CC && $CC --version
         which $CXX && $CXX --version
 
-    - name: Build
+    - name: Build Debug
+      if: matrix.configuration == 'debug'
       run: |
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install/gcc/Debug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/gcc/Debug
-        cmake --build out/build/gcc/Debug -j `nproc`
-        cmake --install out/build/gcc/Debug
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build
+        cmake --build out/build -j 1
+        cmake --install out/build
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+    - name: Build Release
+      if: matrix.configuration == 'release'
+      run: |
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build
+        cmake --build out/build -j 1
+        cmake --install out/build
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v2
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-1
+        name: Copperspice_bionic-gcc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}
+        path: out/install
 
-    - name: Upload archive to bucket
-      run: |
-        cd out/install/gcc
-        tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz Debug
-        aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v1
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: us-west-1
+#  
+#      - name: Upload archive to bucket
+#        run: |
+#          cd out
+#          tar czfp Copperspice_bionic-gcc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}.tgz install
+#          aws s3 cp Copperspice_bionic-gcc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/Copperspice_bionic-gcc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}.tgz
 
 
-  linux-gcc-release:
-    runs-on: ubunt-18.04
+  windows-msvc:
+    runs-on: windows-2019
+
+    strategy:
+      matrix:
+        configuration: [ debug, release ]
+
+    env:
+      CC: cl
+      CXX: cl
+
     defaults:
       run:
-        shell: bash
+        shell: cmd
 
     steps:
-    - name: Install dependencies
-      run: |
-        sudo apt-get update -qq
-        sudo apt install -y cmake
-        sudo apt install -y ninja-build
-        sudo apt install -y libaudio-dev
-        sudo apt install -y libc6-dev
-        sudo apt install -y libfontconfig1-dev
-        sudo apt install -y libfreetype6-dev
-        sudo apt install -y libgl1-mesa-dev
-        sudo apt install -y libglib2.0-dev
-        sudo apt install -y libgstreamer-plugins-base1.0-dev
-        sudo apt install -y libgstreamer1.0-dev
-        sudo apt install -y libice-dev
-        sudo apt install -y libsm-dev
-        sudo apt install -y libx11-dev
-        sudo apt install -y libx11-xcb-dev
-        sudo apt install -y libxcb-glx0-dev
-        sudo apt install -y libxcb-icccm4-dev
-        sudo apt install -y libxcb-image0-dev
-        sudo apt install -y libxcb-keysyms1-dev
-        sudo apt install -y libxcb-randr0-dev
-        sudo apt install -y libxcb-render-util0-dev
-        sudo apt install -y libxcb-render0-dev
-        sudo apt install -y libxcb-shape0-dev
-        sudo apt install -y libxcb-shm0-dev
-        sudo apt install -y libxcb-sync-dev
-        sudo apt install -y libxcb-xfixes0-dev
-        sudo apt install -y libxcb-xinerama0-dev
-        sudo apt install -y libxcb-xkb-dev
-        sudo apt install -y libxcb1-dev
-        sudo apt install -y libxcursor-dev
-        sudo apt install -y libxext-dev
-        sudo apt install -y libxfixes-dev
-        sudo apt install -y libxi-dev
-        sudo apt install -y libxinerama-dev
-        sudo apt install -y libxkbcommon-dev
-        sudo apt install -y libxkbcommon-x11-dev
-        sudo apt install -y libxrandr-dev
-        sudo apt install -y libxrender-dev
+    - name: Configure Git
+      run: git config --global core.autocrlf input
+      shell: bash
 
     - name: Get top commit details
       uses: actions/github-script@0.3.0
@@ -162,79 +152,11 @@ jobs:
       run: |
         echo "COMMITTED_AT=$(date -d ${{ steps.author-date.outputs.result }} +'%Y.%m.%d_%H.%M.%S')" >> $GITHUB_ENV
         echo ${{ env.COMMITTED_AT }}
+      shell: bash
 
     - name: Git pull
       uses: actions/checkout@v2
 
-    - name: Configure shell
-      run: |
-        echo 'CC=gcc-9' >> $GITHUB_ENV
-        echo 'CXX=g++-9' >> $GITHUB_ENV
-
-    - name: Show shell configuration
-      run: |
-        env
-        which cmake && cmake --version
-        which ninja && ninja --version
-        which $CC && $CC --version
-        which $CXX && $CXX --version
-
-    - name: Build
-      run: |
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/gcc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_CXX_FLAGS=-Wno-register -S . -B out/build/gcc/Release
-        cmake --build out/build/gcc/Release -j `nproc`
-        cmake --install out/build/gcc/Release
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-1
-
-    - name: Upload archive to bucket
-      run: |
-        cd out/install/gcc
-        tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz Release
-        aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
-
-
-  windows-msvc-debug:
-    runs-on: windows-2019
-
-    defaults:
-      run:
-        shell: cmd
-
-    steps:
-    - run: Get-PSDrive
-      shell: powershell
-
-    - name: Configure Git
-      run: git config --global core.autocrlf input
-      shell: bash
-
-    - name: Get top commit details
-      uses: actions/github-script@0.3.0
-      id: author-date
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const commit_details = await github.git.getCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: context.sha });
-          return commit_details.data.author.date
-
-    - name: Retrieve date
-      run: |
-        echo "COMMITTED_AT=$(date -d ${{ steps.author-date.outputs.result }} +'%Y.%m.%d_%H.%M.%S')" >> $GITHUB_ENV
-        echo ${{ env.COMMITTED_AT }}
-      shell: bash
-
-    - name: Configure shell
-      run: |
-        echo 'CC=cl' >> $GITHUB_ENV
-        echo 'CXX=cl' >> $GITHUB_ENV
-      shell: bash
-
     - name: Show shell configuration
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
@@ -245,97 +167,45 @@ jobs:
         where %CC% && %CC%
         where %CXX% && %CXX%
 
-    - name: Build
+    - name: Build Debug
+      if: matrix.configuration == 'debug'
       run: |
         # https://github.com/actions/virtual-environments/issues/1341
-        git clone https://github.com/hs-apotell/copperspice.git C:/copperspice --depth 1
+        git clone https://github.com/hs-apotell/copperspice.git C:/Copperspice --depth 1
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 
-        cd /d C:/copperspice
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install/msvc/Debug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -S . -B out/build/msvc/Debug
-        cmake --build out/build/msvc/Debug -j %NUMBER_OF_PROCESSORS%
-        cmake --install out/build/msvc/Debug
+        cd /d C:/Copperspice
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=out/install -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -S . -B out/build
+        cmake --build out/build -j %NUMBER_OF_PROCESSORS%
+        cmake --install out/build
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-1
-
-    - name: Upload archive to bucket
-      run: |
-        cd /d C:/copperspice/out/install/msvc
-        tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz Debug
-        aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
-
-
-  windows-msvc-release:
-    runs-on: windows-2019
-
-    defaults:
-      run:
-        shell: cmd
-
-    steps:
-    - run: Get-PSDrive
-      shell: powershell
-
-    - name: Configure Git
-      run: git config --global core.autocrlf input
-      shell: bash
-
-    - name: Get top commit details
-      uses: actions/github-script@0.3.0
-      id: author-date
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const commit_details = await github.git.getCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: context.sha });
-          return commit_details.data.author.date
-
-    - name: Retrieve date
-      run: |
-        echo "COMMITTED_AT=$(date -d ${{ steps.author-date.outputs.result }} +'%Y.%m.%d_%H.%M.%S')" >> $GITHUB_ENV
-        echo ${{ env.COMMITTED_AT }}
-      shell: bash
-
-    - name: Configure shell
-      run: |
-        echo 'CC=cl' >> $GITHUB_ENV
-        echo 'CXX=cl' >> $GITHUB_ENV
-      shell: bash
-
-    - name: Show shell configuration
-      run: |
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-
-        set
-        where cmake && cmake --version
-        where ninja && ninja --version
-        where %CC% && %CC%
-        where %CXX% && %CXX%
-
-    - name: Build
+    - name: Build Release
+      if: matrix.configuration == 'release'
       run: |
         # https://github.com/actions/virtual-environments/issues/1341
-        git clone https://github.com/hs-apotell/copperspice.git C:/copperspice --depth 1
+        git clone https://github.com/hs-apotell/copperspice.git C:/Copperspice --depth 1
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 
-        cd /d C:/copperspice
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install/msvc/Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -S . -B out/build/msvc/Release
-        cmake --build out/build/msvc/Release -j %NUMBER_OF_PROCESSORS%
-        cmake --install out/build/msvc/Release
+        cd /d C:/Copperspice
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=out/install -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DWITH_MULTIMEDIA=OFF -DWITH_SQL=OFF -DWITH_WEBKIT=OFF -DWITH_PSQL_PLUGIN=OFF -DWITH_MYSQL_PLUGIN=OFF -DWITH_SVG=OFF -DWITH_XMLPATTERNS=OFF -DWITH_SCRIPT=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -S . -B out/build
+        cmake --build out/build -j %NUMBER_OF_PROCESSORS%
+        cmake --install out/build
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v2
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-1
+        name: Copperspice_windows-msvc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}
+        path: out/install
 
-    - name: Upload archive to bucket
-      run: |
-        cd /d C:/copperspice/out/install/msvc
-        tar czfp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz Release
-        aws s3 cp copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/copperspice_${{ env.GITHUB_JOB }}_${{ env.COMMITTED_AT }}.tgz
+#     - name: Configure AWS Credentials
+#       uses: aws-actions/configure-aws-credentials@v1
+#       with:
+#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#         aws-region: us-west-1
+# 
+#     - name: Upload archive to bucket
+#       run: |
+#         cd /d C:/Copperspice/out
+#         tar czfp Copperspice_windows-msvc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}.tgz install
+#         aws s3 cp Copperspice_windows-msvc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}.tgz s3://davenche-bin/Copperspice_windows-msvc-${{ matrix.configuration }}_${{ env.COMMITTED_AT }}.tgz
